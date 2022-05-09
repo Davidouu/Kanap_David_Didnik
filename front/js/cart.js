@@ -1,5 +1,7 @@
 let produitLocalStorage = JSON.parse(localStorage.getItem("produit"));
 
+// fonction qui me permet d'afficher les produits du local storage dans la page panier
+
 async function showCart() {
         for(let elem of produitLocalStorage){
             let id = elem._id;
@@ -67,26 +69,18 @@ async function showCart() {
                 itemDelete.append('Supprimer');
                 itemDelete.classList.add('deleteItem');
                 divItemContentSettingsDelete.appendChild(itemDelete);
-
-                await modifCart();
-
-                function modifCart(){
-                    let boutons = document.querySelectorAll('.itemQuantity');
-                    boutons.forEach(element => {
-                        element.addEventListener('change', modifElemCart);
-                    });
-                    function modifElemCart(){
-                        elem.productQuantity = input.value;
-                        localStorage.setItem("produit", JSON.stringify(produitLocalStorage));
-                    }
-                }
-                // attention au foreach autre part qu'avec un listener
             }))
         };
+
+        // lancement des mes fonction qui ont besoin que les éléments des produits soient créés dans la page (donc après la boucle)
+        
         removeItemCart()
+        modifcart()
 }
 
-function TotalPriceQuantity() {
+// le total de quantité plus le prix total
+
+function totalPriceQuantity() {
     let sumPrice = 0;
     let sumQuantity = 0;
     for(let elem of produitLocalStorage) {
@@ -97,6 +91,26 @@ function TotalPriceQuantity() {
     document.querySelector('#totalQuantity').append(sumQuantity);
     document.querySelector('#totalPrice').append(sumPrice);
 }
+
+// ma fonction qui écoute au changement de l'input de quantité
+
+function modifcart() {
+    let modif = document.querySelectorAll('.itemQuantity');
+    for(let i = 0; i < modif.length; i++){
+        modif[i].addEventListener('change', () => {
+            if(modif[i].value > 100){
+                alert('Vous ne pouvez pas ajouter plus de 100 produits au panier')
+            }else{
+                produitLocalStorage[i].productQuantity = modif[i].value;
+                localStorage.setItem("produit", JSON.stringify(produitLocalStorage));
+                window.location.href = "cart.html";
+            }
+        })
+    }
+}
+
+// ma fonction qui écoutre a la suppréssion d'un produit 
+// à la supression, il y a un tri pour réecrire tout sauf le produit supp du panier dans le local storage 
 
 function removeItemCart() {
     let supp = document.querySelectorAll('.deleteItem');
@@ -111,17 +125,23 @@ function removeItemCart() {
 }
 
 showCart()
-TotalPriceQuantity()
+totalPriceQuantity()
+
+// variables pour mon element formulaire | les regexp du form | et ma variables qui permet de vérifier si le form est bien remplis (de base sur false)
 
 let form = document.querySelector('.cart__order__form');
+
 let emailRegexp = new RegExp('^[a-zA-Z0-9.-_]+[@]{1}[a-zA-Z0-9.-_]+[.]{1}[a-z]{2,10}$', 'g');
-let regexpSimple = new RegExp('^[.-_a-zA-Z0-9.-_ ]{2,}$');
-let regexpAdresse = new RegExp('^[a-zA-Z0-9À-ÖØ-öø-ÿ.-_ 0-9]{2,}$');  
+let regexpSimple = new RegExp('^[a-zA-Z-_ ]');
+let regexpAdresse = new RegExp('^[a-zA-Z0-9À-ÖØ-öø-ÿ.-_ 0-9]{2,}$');
+
 let prenomValide = false;
 let nomValide = false;
 let adresseValide = false;
 let villeValide = false;
 let emailValide = false;
+
+// mes 5 fonctions qui écoute au changement des champs du form, si validé alors ma variables passe true
 
 form.firstName.addEventListener('change', function(){
     let testFirstName = regexpSimple.test(this.value);
@@ -163,6 +183,8 @@ form.email.addEventListener('change', function(){
     }else{}
 })
 
+// fonction qui vérifie si tous les champs du form sont valide 
+
 function verifForm(){
     if(prenomValide && nomValide && adresseValide && villeValide && emailValide){
         return true;
@@ -171,11 +193,19 @@ function verifForm(){
         return false;
     }
 }
-
+        
 const commande = document.getElementById('order');
+
+// fonction qui créer un objet de commande, et qui le post à l'api pour récuperer un id de commande qui seras placer dans le local storage
 
 commande.addEventListener('click', function(){
     if(verifForm()){
+        let ids = [];
+
+        for(let i = 0; i <produitLocalStorage.length; i++){
+            ids.push(produitLocalStorage[i]._id)
+        }
+
         let detailCommande = {
             contact: {
                 firstName: firstName.value,
@@ -184,18 +214,19 @@ commande.addEventListener('click', function(){
                 city: city.value,
                 email: email.value,
             },
-            products: []
+            products: ids,
         };
+
         let post = {
             method: 'POST',
+            body: JSON.stringify(detailCommande),
             headers: {
                 'content-Type': 'application/json'},
-                body: JSON.stringify(detailCommande),
             };
+
         fetch("http://localhost:3000/api/products/order", post)
             .then((response) => response.json())
             .then(data => {
-                localStorage.setItem("orderId", data.orderId);
-                document.location.href = `confirmation.html`;
+                document.location.href = `confirmation.html?order_id=` + data.orderId;
             });   
 }})

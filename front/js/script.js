@@ -1,6 +1,10 @@
+// url de l'api
+
 let url = `http://localhost:3000/api/products`;
 
-function getProduct () {
+// fonction qui grâce à une boucle me permet d'afficher tous les produits sur la page d'accueil
+
+function getProducts () {
   fetch(url)
   .then((response) => response.json()
   .then((data) => {
@@ -25,4 +29,6 @@ function getProduct () {
   }))
 }
 
-getProduct()
+// lancement de la fonction
+
+getProducts()
